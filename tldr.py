@@ -6,31 +6,36 @@ import warnings
 from dragnet import extract_content
 from gensim.summarization import summarize, keywords
 from slackclient import SlackClient
+from urllib.parse import urlparse
 
 warnings.filterwarnings('ignore', category=UserWarning)
 
-COMMAND_REGEX = re.compile('^!tldr (https?://[^\s]+)')
-RTM_READ_DELAY = 3
+COMMAND_REGEX = re.compile('^!tldr <(https?://[^\s]+)>')
+RESPONSE_TEMPLATE = u'%s %s %i%% reduced:\n> %s\n*Keywords* %s'
+ERROR_RESPONSE = '¯\_(ツ)_/¯'
+RTM_READ_DELAY = 1
+WORD_COUNT = int(os.environ.get('WORD_COUNT') or 200)
+KEYWORD_COUNT = int(os.environ.get('KEYWORD_COUNT') or 5)
 SLACK_BOT_TOKEN = os.environ.get('SLACK_BOT_TOKEN')
 
 if not SLACK_BOT_TOKEN:
-    print('SLACK_BOT_TOKEN env var must be set')
+    print('Error: SLACK_BOT_TOKEN env var must be set')
     exit(1)
-slack_client = SlackClient()
+slack_client = SlackClient(SLACK_BOT_TOKEN)
 bot_id = None
 
 
-def tldrafy(url):
+def tldrafy(user, url):
+    domain = urlparse(url).netloc
     content = extract_content(requests.get(url).content)
-    summary = summarize(content, word_count=200)
-    keyword_list = keywords(content, words=10, lemmatize=True, split=True)
+    summary = summarize(content, word_count=WORD_COUNT)
+    keyword_list = keywords(content, words=KEYWORD_COUNT, lemmatize=True, split=True)
     percent_reduction = round((1 - (float(len(summary)) / len(content))) * 100)
-
-    return {
-      'summary': summary.replace('\n', ' '),
-      'keywords': keyword_list,
-      'percent_reduction': percent_reduction
-    }
+    return '<@%s>' % user, \
+           '<%s|%s>' % (url, domain), \
+           percent_reduction, \
+           summary.replace('\n', ' '), \
+           ', '.join(keyword_list)
 
 
 def parse_events(slack_events):
@@ -38,20 +43,23 @@ def parse_events(slack_events):
         if event['type'] == 'message' and 'subtype' not in event:
             match = COMMAND_REGEX.match(event['text'])
             if match:
-                tldr = tldrafy(match.group(1))  # TODO error handling
-                response = u'> %s' % tldr['summary']
+                try:
+                    response = RESPONSE_TEMPLATE % tldrafy(event['user'], match.group(1))
+                except Exception as err:
+                    print('Error: %s' % err)
+                    response = ERROR_RESPONSE
                 slack_client.api_call('chat.postMessage',
                                       channel=event['channel'],
-                                      text=response or '¯\_(ツ)_/¯')
+                                      text=response)
 
 
 if __name__ == "__main__":
     if slack_client.rtm_connect(with_team_state=False):
-        print('tldrbot connected')
+        print('@tldrbot connected')
         bot_id = slack_client.api_call('auth.test')['user_id']
         while True:
             parse_events(slack_client.rtm_read())
             time.sleep(RTM_READ_DELAY)
     else:
-        print('Could not connect')
+        print('Error: Could not connect')
         exit(1)
