@@ -6,7 +6,7 @@ to create a [Slack](https://slack.com/) bot that summarizes the content at a giv
 ### In Slack
 Usage: ```!tldr <url>```
 
-![Example screenshot](../assets/example.png)
+![Example screenshot](http://github.com/EvilScott/tldrbot/raw/assets/example.png)
 
 
 ### Installation
