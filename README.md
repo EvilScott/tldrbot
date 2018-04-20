@@ -12,7 +12,7 @@ Usage: ```!tldr <url>```
 ### Installation
 - [Create a new slack app](https://api.slack.com/apps) and create a bot token.
 - ```$ docker pull evilscott/tldrbot```
-- ```$ docker run -e SLACK_BOT_TOKEN=<your bot token> --name tldrbot -itd --rm tldrbot```
+- ```$ docker run -e SLACK_BOT_TOKEN=<your bot token> --name tldrbot -itd --rm evilscott/tldrbot```
 
 ### Parameters
 Pass these in as environmental variables to the ```docker run``` command:
