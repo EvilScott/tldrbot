@@ -11,7 +11,7 @@ Usage: ```!tldr <url>```
 
 ### Installation
 - [Create a new slack app](https://api.slack.com/apps) and create a bot token.
-- ```$ docker pull tldrbot:latest```
+- ```$ docker pull evilscott/tldrbot```
 - ```$ docker run -e SLACK_BOT_TOKEN=<your bot token> --name tldrbot -itd --rm tldrbot```
 
 ### Parameters
